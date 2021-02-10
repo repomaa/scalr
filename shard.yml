@@ -1,0 +1,25 @@
+name: scalr
+version: 0.1.0
+
+authors:
+  - Joakim Repomaa <mail@j.repomaa.com>
+
+targets:
+  scalr:
+    main: src/scalr.cr
+
+dependencies:
+  athena:
+    github: athena-framework/athena
+  pixie:
+    github: watzon/pixie
+  awscr-s3:
+    github: repomaa/awscr-s3
+    branch: topic/date-format
+  awscr-signer:
+    github: taylorfinnell/awscr-signer
+    version: ~> 0.8.1
+
+crystal: 0.36.0
+
+license: MIT
