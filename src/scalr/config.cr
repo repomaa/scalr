@@ -4,16 +4,16 @@ module Scalr::Config
   struct S3
     include ACF::Configuration
 
-    getter region : String { ENV["AWS_S3_REGION"]? || "us-east-1" }
-    getter key : String { ENV["AWS_KEY_ID"] }
-    getter secret : String { ENV["AWS_SECRET_KEY"] }
+    getter region : String { ENV["AWS_DEFAULT_REGION"]? || "us-east-1" }
+    getter key : String { ENV["AWS_ACCESS_KEY_ID"] }
+    getter secret : String { ENV["AWS_SECRET_ACCESS_KEY"] }
     @[YAML::Field(converter: Scalr::Config::URLConverter)]
     getter endpoint : URI? do
-      ENV["AWS_S3_ENDPOINT"]?.try { |value| URI.parse(value) }
+      ENV["AWS_ENDPOINT"]?.try { |value| URI.parse(value) }
     end
     @[YAML::Field(converter: Scalr::Config::URLConverter)]
     getter public_endpoint : URI? do
-      ENV["AWS_S3_PUBLIC_ENDPOINT"]?.try { |value| URI.parse(value) } || endpoint
+      ENV["AWS_PUBLIC_ENDPOINT"]?.try { |value| URI.parse(value) } || endpoint
     end
 
     getter buckets : Scalr::Config::S3::Buckets = Scalr::Config::S3::Buckets.new
