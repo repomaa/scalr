@@ -2,7 +2,6 @@ require "athena"
 require "pixie"
 
 module Scalr::Services
-  @[ADI::Register]
   class ImageProcessor
     struct Options
       include AVD::Validatable

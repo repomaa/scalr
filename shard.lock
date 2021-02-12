@@ -6,15 +6,15 @@ shards:
 
   athena:
     git: https://github.com/athena-framework/athena.git
-    version: 0.12.0
+    version: 0.13.0
 
   athena-config:
     git: https://github.com/athena-framework/config.git
-    version: 0.1.3
+    version: 0.2.1
 
   athena-dependency_injection:
     git: https://github.com/athena-framework/dependency-injection.git
-    version: 0.2.3
+    version: 0.2.5
 
   athena-event_dispatcher:
     git: https://github.com/athena-framework/event-dispatcher.git
@@ -22,7 +22,7 @@ shards:
 
   athena-serializer:
     git: https://github.com/athena-framework/serializer.git
-    version: 0.2.3
+    version: 0.2.5
 
   athena-validator:
     git: https://github.com/athena-framework/validator.git
@@ -34,7 +34,7 @@ shards:
 
   awscr-signer:
     git: https://github.com/repomaa/awscr-signer.git
-    version: 0.8.1+git.commit.b07282163057f919a8271d92113d4ee323e46c59
+    version: 0.8.1+git.commit.b4a53e42e18868f0f0df337c9f2b88d92e0660f1
 
   pixie:
     git: https://github.com/watzon/pixie.git

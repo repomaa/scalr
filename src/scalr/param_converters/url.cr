@@ -1,14 +1,14 @@
 require "uri"
 require "athena"
+require "./base"
 
 module Scalr::ParamConverters
-  @[ADI::Register]
-  struct URL < ART::ParamConverterInterface
-    def apply(request : HTTP::Request, configuration : Configuration) : Nil
-      arg_name = configuration.name
-      return unless request.attributes.has? arg_name
-      string_value = request.attributes.get(arg_name, String)
-      request.attributes.set(arg_name, URI.parse(string_value))
+  struct URL
+    include Base(URI)
+
+    protected def convert(request : HTTP::Request) : URI
+      string_value = request.query_params[name]
+      return URI.parse(string_value)
     end
   end
 end

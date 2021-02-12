@@ -1,39 +1,48 @@
-require "digest/md5"
-require "athena"
-require "http/client"
-require "mime"
-require "../param_converters/url"
-require "../param_converters/image_processor_options"
+require "http/server/handler"
 require "../services/image_processor"
 require "../services/s3"
+require "../param_converters/url"
+require "../param_converters/image_processor_options"
+require "../config"
 require "../http_clients"
 
-module Scalr::Controllers
-  @[ART::Prefix("images")]
-  @[ADI::Register(public: true)]
-  class Images < ART::Controller
+module Scalr
+  class Server
+    include HTTP::Handler
+
     TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 
-    def initialize(
-      @image_processor : Scalr::Services::ImageProcessor,
-      @s3 : Scalr::Services::S3,
-      @serializer : ASR::Serializer,
-    )
+    private getter allowed_hosts : Array(Regex)
+
+    def initialize
+      @http_clients = HTTPClients.new
+      @allowed_hosts = ACF.config.server.allowed_hosts
+      @image_processor = Scalr::Services::ImageProcessor.new
+      @s3 = Scalr::Services::S3.new(ACF.config.s3)
+      @serializer = ASR::Serializer.new
+      @url_converter = ParamConverters::URL.new("url")
+      @options_converter = ParamConverters::ImageProcessorOptions.new("options")
     end
 
-    @[ART::Get("/")]
-    @[ART::QueryParam("url")]
-    @[ART::ParamConverter("url", converter: Scalr::ParamConverters::URL)]
-    @[ART::ParamConverter("options", converter: Scalr::ParamConverters::ImageProcessorOptions)]
-    def convert(
-      url : URI,
-      options : Scalr::Services::ImageProcessor::Options,
-    ) : ART::Response
+    def call(context : HTTP::Server::Context)
+      request = context.request
+      return call_next(context) if request.method != "GET"
+      return call_next(context) if request.path != "/images"
+
+      url = @url_converter.run(request)
+      options = @options_converter.run(request)
+
       original = @s3.get_original(hash_original(url))
       conversion = @s3.get_conversion(hash_conversion(url, options))
       fetch_if_needed(original, url)
       convert_if_needed(original, conversion, options)
-      ART::RedirectResponse.new(url: conversion.presigned_url)
+
+      redirect_to(context.response, conversion.presigned_url)
+    end
+
+    private def redirect_to(response, url)
+      response.status = HTTP::Status::FOUND
+      response.headers["Location"] = url
     end
 
     private def convert_if_needed(original, conversion, options)
@@ -69,11 +78,11 @@ module Scalr::Controllers
         raise ART::Exceptions::BadRequest.new("invalid url #{url}")
       end
 
-      if ACF.config.allowed_hosts.none?(&.matches?(host))
+      if allowed_hosts.none?(&.matches?(host))
         raise ART::Exceptions::Forbidden.new("host #{host} not in whitelist")
       end
 
-      HTTPClients.pool.with_client_for(host, tls: url.scheme == "https") do |client|
+      @http_clients.with_client_for(host, tls: url.scheme == "https") do |client|
         try_fetch(original, client, url)
       end
     end

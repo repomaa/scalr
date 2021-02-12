@@ -1,23 +1,12 @@
 require "pool"
-require "athena"
 require "awscr-s3"
 require "../config"
 require "../ext/awscr_client"
 
 module Scalr::Services
-  @[ADI::Register(public: true, name: "s3")]
   class S3
     DEFAULT_REGION = "us-east-1"
     DEFAULT_HOST = "s3.amazonaws.com"
-    CLIENTS = Pool.new do
-      Awscr::S3::Client.new(
-        region: ACF.config.s3.region,
-        aws_access_key: ACF.config.s3.key,
-        aws_secret_key: ACF.config.s3.secret,
-        endpoint: ACF.config.s3.endpoint.to_s,
-      )
-    end
-
     EXPIRES = 4.weeks.total_seconds.to_i.to_s
 
     @config : Config::S3
@@ -31,6 +20,7 @@ module Scalr::Services
         @config : Scalr::Config::S3,
         @bucket : String,
         @key : String,
+        @clients : Pool(Awscr::S3::Client)
       )
         @modified = false
         @exists = false
@@ -113,7 +103,7 @@ module Scalr::Services
             timestamp: Time.utc.at_beginning_of_month
           )
 
-          client.signer.presign(request, scope)
+          client.signer.presign(request, scope: scope)
         end
       end
 
@@ -155,7 +145,7 @@ module Scalr::Services
       end
 
       private def with_client(&block : Awscr::S3::Client -> T) : T forall T
-        CLIENTS.get do |client|
+        @clients.get do |client|
           return yield client
         end
 
@@ -163,18 +153,25 @@ module Scalr::Services
       end
     end
 
-    def initialize(@request_store : ART::RequestStore)
-      @config = ACF.config.s3
+    def initialize(@config : Scalr::Config::S3)
+      @clients = Pool(Awscr::S3::Client).new do
+        Awscr::S3::Client.new(
+          region: @config.region,
+          aws_access_key: @config.key,
+          aws_secret_key: @config.secret,
+          endpoint: @config.endpoint.to_s,
+        )
+      end
     end
 
     def get_original(object)
       bucket = @config.buckets.originals
-      Object.new(@config, bucket, object)
+      Object.new(@config, bucket, object, @clients)
     end
 
     def get_conversion(object)
       bucket = @config.buckets.conversions
-      Object.new(@config, bucket, object)
+      Object.new(@config, bucket, object, @clients)
     end
   end
 end

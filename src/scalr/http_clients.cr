@@ -2,10 +2,8 @@ require "./config"
 require "pool"
 require "http/client"
 
-module Scalr::HTTPClients
-  class_getter pool = Pool.new
-
-  class Pool
+module Scalr
+  class HTTPClients
     def initialize
       @clients = Hash({String, Bool}, ::Pool(HTTP::Client)).new
       @mutex = Mutex.new
