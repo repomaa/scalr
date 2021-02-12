@@ -1,3 +1,4 @@
+require "pool"
 require "athena"
 require "awscr-s3"
 require "../config"
@@ -8,12 +9,14 @@ module Scalr::Services
   class S3
     DEFAULT_REGION = "us-east-1"
     DEFAULT_HOST = "s3.amazonaws.com"
-    CLIENT = Awscr::S3::Client.new(
-      region: ACF.config.s3.region,
-      aws_access_key: ACF.config.s3.key,
-      aws_secret_key: ACF.config.s3.secret,
-      endpoint: ACF.config.s3.endpoint.to_s,
-    )
+    CLIENTS = Pool.new do
+      Awscr::S3::Client.new(
+        region: ACF.config.s3.region,
+        aws_access_key: ACF.config.s3.key,
+        aws_secret_key: ACF.config.s3.secret,
+        endpoint: ACF.config.s3.endpoint.to_s,
+      )
+    end
 
     @config : Config::S3
 
@@ -33,7 +36,10 @@ module Scalr::Services
         @headers = HTTP::Headers.new
 
         begin
-          @headers = CLIENT.head_object(@bucket, @key).headers
+          @headers = with_client do |client|
+            client.head_object(@bucket, @key).headers
+          end
+
           @exists = true
         rescue
         end
@@ -62,8 +68,10 @@ module Scalr::Services
         raise "Cannot read from non-existing object" unless exists?
 
         if @cache.empty?
-          CLIENT.get_object(@bucket, @key) do |response|
-            IO.copy(response.body_io, @cache)
+          with_client do |client|
+            client.get_object(@bucket, @key) do |response|
+              IO.copy(response.body_io, @cache)
+            end
           end
         end
 
@@ -87,13 +95,18 @@ module Scalr::Services
           headers[key] = values.first
         end
 
-        CLIENT.put_object(@bucket, @key, @cache.to_slice, headers: headers.to_h)
+        with_client do |client|
+          client.put_object(@bucket, @key, @cache.to_slice, headers: headers.to_h)
+        end
+
         @exists = true
         @modified = true
       end
 
       private def presign_request(request : HTTP::Request)
-        CLIENT.signer.presign(request)
+        with_client do |client|
+          client.signer.presign(request)
+        end
       end
 
       private def build_request(method : String, bucket : String, object : String)
@@ -128,8 +141,17 @@ module Scalr::Services
       end
 
       private def default_port?(endpoint)
-        endpoint.scheme == "http" && endpoint.port == 80 ||
-        endpoint.scheme == "https" && endpoint.port == 443
+        scheme = endpoint.scheme
+        port = endpoint.port
+        port.nil? || scheme == "http" && port == 80 || scheme == "https" && port == 443
+      end
+
+      private def with_client(&block : Awscr::S3::Client -> T) : T forall T
+        CLIENTS.get do |client|
+          return yield client
+        end
+
+        raise "connection pool didn't yield"
       end
     end
 

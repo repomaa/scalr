@@ -73,15 +73,8 @@ module Scalr::Controllers
         raise ART::Exceptions::Forbidden.new("host #{host} not in whitelist")
       end
 
-      client = HTTPClients.client_for(host, tls: url.scheme == "https")
-      retries = 0
-
-      loop do
-        return try_fetch(original, client, url)
-      rescue ex : IO::Error
-        client = HTTPClients.client_for(host, reconnect: true)
-        raise ex if retries > 2
-        retries += 1
+      HTTPClients.pool.with_client_for(host, tls: url.scheme == "https") do |client|
+        try_fetch(original, client, url)
       end
     end
 

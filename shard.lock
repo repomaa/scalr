@@ -40,3 +40,7 @@ shards:
     git: https://github.com/watzon/pixie.git
     version: 0.1.0+git.commit.0285395f6bbc71f70c0befc1ffb9560595125c16
 
+  pool:
+    git: https://github.com/j8r/pool.cr.git
+    version: 0.1.0
+
