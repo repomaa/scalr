@@ -15,10 +15,7 @@ dependencies:
     github: watzon/pixie
   awscr-s3:
     github: repomaa/awscr-s3
-    branch: topic/reuse-connection
-  awscr-signer:
-    github: taylorfinnell/awscr-signer
-    version: ~> 0.8.1
+    branch: master
   pool:
     github: j8r/pool.cr
 

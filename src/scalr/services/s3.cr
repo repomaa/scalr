@@ -18,6 +18,8 @@ module Scalr::Services
       )
     end
 
+    EXPIRES = 4.weeks.total_seconds.to_i.to_s
+
     @config : Config::S3
 
     class Object
@@ -105,7 +107,13 @@ module Scalr::Services
 
       private def presign_request(request : HTTP::Request)
         with_client do |client|
-          client.signer.presign(request)
+          scope = Awscr::Signer::Scope.new(
+            region: @config.region,
+            service: "s3",
+            timestamp: Time.utc.at_beginning_of_month
+          )
+
+          client.signer.presign(request, scope)
         end
       end
 
@@ -120,16 +128,7 @@ module Scalr::Services
           body
         )
 
-        request.query_params.add(
-          "X-Amz-Date",
-          Time.utc.at_beginning_of_month.to_s("%Y%m%dT%H%M%SZ")
-        )
-
-        request.query_params.add(
-          "X-Amz-Expires",
-          4.weeks.total_seconds.to_s
-        )
-
+        request.query_params.add("X-Amz-Expires", EXPIRES)
         request
       end
 

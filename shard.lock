@@ -30,11 +30,11 @@ shards:
 
   awscr-s3:
     git: https://github.com/repomaa/awscr-s3.git
-    version: 0.8.1+git.commit.c385112197d8c1b62aca48cd6e196e4f65712893
+    version: 0.8.1+git.commit.68918980d9db52933422e3f2511a324874d36460
 
   awscr-signer:
-    git: https://github.com/taylorfinnell/awscr-signer.git
-    version: 0.8.1
+    git: https://github.com/repomaa/awscr-signer.git
+    version: 0.8.1+git.commit.b07282163057f919a8271d92113d4ee323e46c59
 
   pixie:
     git: https://github.com/watzon/pixie.git
