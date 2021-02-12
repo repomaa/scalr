@@ -120,7 +120,16 @@ module Scalr::Services
           body
         )
 
-        request.query_params.add("X-Amz-Expires", "300")
+        request.query_params.add(
+          "X-Amz-Date",
+          Time.utc.at_beginning_of_month.to_s("%Y%m%dT%H%M%SZ")
+        )
+
+        request.query_params.add(
+          "X-Amz-Expires",
+          4.weeks.total_seconds.to_s
+        )
+
         request
       end
 
