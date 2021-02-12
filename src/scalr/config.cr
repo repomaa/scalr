@@ -26,6 +26,13 @@ module Scalr::Config
     end
   end
 
+  @[ACFA::Resolvable("cache")]
+  struct Cache
+    getter? enabled : Bool { ENV.has_key?("SCALR_CACHE_ENABLED") }
+    getter redis_host : String { ENV["REDIS_HOST"]? || "localhost" }
+    getter redis_port : Int32? { ENV["REDIS_HOST"]? }
+  end
+
   @[ACFA::Resolvable("s3")]
   struct S3
     getter region : String { ENV["AWS_DEFAULT_REGION"]? || "us-east-1" }

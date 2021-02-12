@@ -2,38 +2,39 @@ require "pool"
 require "awscr-s3"
 require "../config"
 require "../ext/awscr_client"
+require "cache"
 
 module Scalr::Services
   class S3
     DEFAULT_REGION = "us-east-1"
     DEFAULT_HOST = "s3.amazonaws.com"
-    EXPIRES = 4.weeks.total_seconds.to_i.to_s
+    EXPIRES = 1.week.total_seconds.to_i.to_s
 
     @config : Config::S3
 
     class Object
       getter? exists
       getter? modified
-      getter headers
+      getter headers : HTTP::Headers
 
       def initialize(
         @config : Scalr::Config::S3,
         @bucket : String,
         @key : String,
-        @clients : Pool(Awscr::S3::Client)
+        @clients : ::Pool(Awscr::S3::Client),
+        @header_cache : Cache::MemoryStore(String, HTTP::Headers),
       )
         @modified = false
-        @exists = false
+        @exists = true
         @cache = IO::Memory.new
-        @headers = HTTP::Headers.new
 
-        begin
-          @headers = with_client do |client|
+        @headers = @header_cache.fetch("#{@bucket}/#{@key}") do
+          with_client do |client|
             client.head_object(@bucket, @key).headers
           end
-
-          @exists = true
         rescue
+          @exists = false
+          HTTP::Headers.new
         end
       end
 
@@ -88,11 +89,33 @@ module Scalr::Services
         end
 
         with_client do |client|
-          client.put_object(@bucket, @key, @cache.to_slice, headers: headers.to_h)
+          client.put_object(@bucket, @key, @cache.to_slice, headers: headers)
         end
 
         @exists = true
         @modified = true
+      end
+
+      def update_headers
+        headers = {
+          "x-amz-copy-source" => "/#{@bucket}/#{@key}",
+          "x-amz-metadata-directive" => "REPLACE",
+        }
+
+        @headers.each do |key, values|
+          downcased_key = key.downcase
+          unless downcased_key == "content-type" || downcased_key.starts_with?("x-amz-meta-")
+            next
+          end
+
+          headers[key] = values.first
+        end
+
+        with_client do |client|
+          client.put_object(@bucket, @key, "", headers: headers)
+        end
+
+        @header_cache.write("#{@bucket}/#{@key}", @headers)
       end
 
       private def presign_request(request : HTTP::Request)
@@ -100,7 +123,7 @@ module Scalr::Services
           scope = Awscr::Signer::Scope.new(
             region: @config.region,
             service: "s3",
-            timestamp: Time.utc.at_beginning_of_month
+            timestamp: Time.utc.at_beginning_of_week
           )
 
           client.signer.presign(request, scope: scope)
@@ -145,10 +168,7 @@ module Scalr::Services
       end
 
       private def with_client(&block : Awscr::S3::Client -> T) : T forall T
-        @clients.get do |client|
-          return yield client
-        end
-
+        @clients.get { |client| return yield client }
         raise "connection pool didn't yield"
       end
     end
@@ -162,16 +182,20 @@ module Scalr::Services
           endpoint: @config.endpoint.to_s,
         )
       end
+
+      @header_cache = Cache::MemoryStore(String, HTTP::Headers).new(
+        expires_in: 10.minutes,
+      )
     end
 
     def get_original(object)
       bucket = @config.buckets.originals
-      Object.new(@config, bucket, object, @clients)
+      Object.new(@config, bucket, object, @clients, @header_cache)
     end
 
     def get_conversion(object)
       bucket = @config.buckets.conversions
-      Object.new(@config, bucket, object, @clients)
+      Object.new(@config, bucket, object, @clients, @header_cache)
     end
   end
 end

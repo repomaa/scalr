@@ -7,5 +7,5 @@ COPY shard.yml shard.lock /app/
 RUN shards install --production
 COPY athena.yml /app/athena.yml
 COPY src /app/src/
-RUN shards build --release --production
+RUN shards build --production --release
 RUN apk del imagemagick-dev

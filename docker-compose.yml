@@ -22,8 +22,18 @@ services:
     volumes:
       - minio_data:/data
 
+  redis:
+    image: redis:alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - internal
+    volumes:
+      - redis_data:/data
+
+
 networks:
   internal:
 
 volumes:
   minio_data:
+  redis_data:

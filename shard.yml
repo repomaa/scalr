@@ -18,6 +18,8 @@ dependencies:
     branch: master
   pool:
     github: j8r/pool.cr
+  cache:
+    github: crystal-cache/cache
 
 crystal: 0.36.0
 

@@ -36,6 +36,10 @@ shards:
     git: https://github.com/repomaa/awscr-signer.git
     version: 0.8.1+git.commit.b4a53e42e18868f0f0df337c9f2b88d92e0660f1
 
+  cache:
+    git: https://github.com/crystal-cache/cache.git
+    version: 0.12.1
+
   pixie:
     git: https://github.com/watzon/pixie.git
     version: 0.1.0+git.commit.0285395f6bbc71f70c0befc1ffb9560595125c16

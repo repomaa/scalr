@@ -37,11 +37,23 @@ module Scalr
       fetch_if_needed(original, url)
       convert_if_needed(original, conversion, options)
 
-      redirect_to(context.response, conversion.presigned_url)
+      expires = original.headers["x-amz-meta-original-expires"]?.try do |value|
+        Time.unix(value.to_i)
+      end
+
+      redirect_to(
+        context.response,
+        expires || 1.week.from_now,
+        conversion.presigned_url
+      )
     end
 
-    private def redirect_to(response, url)
+    private def redirect_to(response, expires, url)
+      p! expires
+
       response.status = HTTP::Status::FOUND
+      max_age = (expires - Time.utc).total_seconds.to_i
+      response.headers["Cache-Control"] = "public, max-age=#{max_age}"
       response.headers["Location"] = url
     end
 
@@ -101,6 +113,13 @@ module Scalr
       client.get(url.to_s, headers: request_headers) do |response|
         if response.status.not_modified?
           Log.info { "Original is unmodified" }
+          expires = extract_expires(response.headers)
+          if expires > Time.utc
+            Log.info { "Updating headers" }
+            original.headers["x-amz-meta-original-expires"] = expires.to_unix.to_s
+            original.update_headers
+          end
+
           next
         end
 
@@ -126,6 +145,7 @@ module Scalr
           last_modified.try { |value| headers["x-amz-meta-original-last-modified"] = value }
         end
       rescue ex
+        ex.inspect_with_backtrace(STDERR)
         raise ART::Exceptions::BadRequest.new(
           "Failed to fetch image from url: #{ex}"
         )

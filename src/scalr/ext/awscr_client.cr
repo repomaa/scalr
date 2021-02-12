@@ -1,5 +1,7 @@
 require "awscr-s3"
 
-class Awscr::S3::Client
-  getter signer
+module Awscr::S3
+  class Client
+    getter signer
+  end
 end

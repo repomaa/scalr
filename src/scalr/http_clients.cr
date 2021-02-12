@@ -5,7 +5,7 @@ require "http/client"
 module Scalr
   class HTTPClients
     def initialize
-      @clients = Hash({String, Bool}, ::Pool(HTTP::Client)).new
+      @clients = Hash({String, Bool}, Pool(HTTP::Client)).new
       @mutex = Mutex.new
     end
 
@@ -26,7 +26,7 @@ module Scalr
 
     private def get_pool(host, tls)
       @mutex.synchronize do
-        @clients[{host, tls}] ||= ::Pool.new { HTTP::Client.new(host, tls: tls) }
+        @clients[{host, tls}] ||= Pool.new { HTTP::Client.new(host, tls: tls) }
       end
     end
   end
