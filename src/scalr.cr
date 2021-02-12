@@ -9,5 +9,5 @@ module Scalr
     Server.new,
   ])
 
-  server.listen(ACF.config.server.port)
+  server.listen("0.0.0.0", ACF.config.server.port)
 end
