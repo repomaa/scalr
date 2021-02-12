@@ -45,18 +45,6 @@ module Scalr::Config
       getter conversions : String { ENV["SCALR_BUCKET_CONVERSIONS"]? || "scalr-conversions" }
     end
   end
-
-  module URLConverter
-    def from_yaml(ctx : YAML::ParseContext, node : YAML::Nodes::Node) : URI
-      unless node.is_a?(YAML::Nodes::Scalar)
-        node.raise "Expected scalar, not #{node.class}"
-      end
-
-      URI.parse(node.value)
-    end
-
-    extend self
-  end
 end
 
 class Athena::Config::Base
