@@ -12,7 +12,7 @@ module Scalr::HTTPClients
     end
 
     def with_client_for(host : String, tls = false, &block : HTTP::Client -> T) : T forall T
-      pool = @clients[{host, tls}]? || add_pool(host, tls)
+      pool = get_pool(host, tls)
 
       retries = 0
 
@@ -26,7 +26,7 @@ module Scalr::HTTPClients
       end
     end
 
-    private def add_pool(host, tls)
+    private def get_pool(host, tls)
       @mutex.synchronize do
         @clients[{host, tls}] ||= ::Pool.new { HTTP::Client.new(host, tls: tls) }
       end
