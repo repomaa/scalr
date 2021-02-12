@@ -8,6 +8,12 @@ module Scalr::Services
   class S3
     DEFAULT_REGION = "us-east-1"
     DEFAULT_HOST = "s3.amazonaws.com"
+    CLIENT = Awscr::S3::Client.new(
+      region: ACF.config.s3.region,
+      aws_access_key: ACF.config.s3.key,
+      aws_secret_key: ACF.config.s3.secret,
+      endpoint: ACF.config.s3.endpoint.to_s,
+    )
 
     @config : Config::S3
 
@@ -17,7 +23,6 @@ module Scalr::Services
       getter headers
 
       def initialize(
-        @client : Awscr::S3::Client,
         @config : Scalr::Config::S3,
         @bucket : String,
         @key : String,
@@ -28,7 +33,7 @@ module Scalr::Services
         @headers = HTTP::Headers.new
 
         begin
-          @headers = @client.head_object(@bucket, @key).headers
+          @headers = CLIENT.head_object(@bucket, @key).headers
           @exists = true
         rescue
         end
@@ -57,7 +62,7 @@ module Scalr::Services
         raise "Cannot read from non-existing object" unless exists?
 
         if @cache.empty?
-          @client.get_object(@bucket, @key) do |response|
+          CLIENT.get_object(@bucket, @key) do |response|
             IO.copy(response.body_io, @cache)
           end
         end
@@ -82,13 +87,13 @@ module Scalr::Services
           headers[key] = values.first
         end
 
-        @client.put_object(@bucket, @key, @cache.to_slice, headers: headers.to_h)
+        CLIENT.put_object(@bucket, @key, @cache.to_slice, headers: headers.to_h)
         @exists = true
         @modified = true
       end
 
       private def presign_request(request : HTTP::Request)
-        @client.signer.presign(request)
+        CLIENT.signer.presign(request)
       end
 
       private def build_request(method : String, bucket : String, object : String)
@@ -128,26 +133,18 @@ module Scalr::Services
       end
     end
 
-    def initialize(
-      @request_store : ART::RequestStore,
-    )
+    def initialize(@request_store : ART::RequestStore)
       @config = ACF.config.s3
-      @client = Awscr::S3::Client.new(
-        region: @config.region,
-        aws_access_key: @config.key,
-        aws_secret_key: @config.secret,
-        endpoint: @config.endpoint.to_s,
-      )
     end
 
     def get_original(object)
       bucket = @config.buckets.originals
-      Object.new(@client, @config, bucket, object)
+      Object.new(@config, bucket, object)
     end
 
     def get_conversion(object)
       bucket = @config.buckets.conversions
-      Object.new(@client, @config, bucket, object)
+      Object.new(@config, bucket, object)
     end
   end
 end

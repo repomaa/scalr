@@ -118,6 +118,7 @@ module Scalr::Controllers
 
           expires = extract_expires(response.headers)
           headers["x-amz-meta-original-expires"] = expires.to_unix.to_s
+          headers["Content-Type"] = content_type
 
           etag.try { |value| headers["x-amz-meta-original-etag"] = value }
           last_modified.try { |value| headers["x-amz-meta-original-last-modified"] = value }
