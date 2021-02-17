@@ -41,17 +41,12 @@ module Scalr
         Time.unix(value.to_i)
       end
 
-      redirect_to(
-        context.response,
-        expires || 1.week.from_now,
-        conversion.presigned_url
-      )
+      redirect_to(context.response, conversion.presigned_url)
     end
 
-    private def redirect_to(response, expires, url)
-      p! expires
-
+    private def redirect_to(response, url)
       response.status = HTTP::Status::FOUND
+      expires = 1.week.from_now.at_beginning_of_week
       max_age = (expires - Time.utc).total_seconds.to_i
       response.headers["Cache-Control"] = "public, max-age=#{max_age}"
       response.headers["Location"] = url

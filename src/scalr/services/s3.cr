@@ -142,6 +142,10 @@ module Scalr::Services
         )
 
         request.query_params.add("X-Amz-Expires", EXPIRES)
+        request.query_params.add(
+          "response-cache-control",
+          "public,max-age=#{EXPIRES}"
+        )
         request
       end
 
